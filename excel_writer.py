@@ -24,7 +24,7 @@ class ExcelWriter:
     def __init__(self):
         self.token      = get_access_token()
         self.file_path  = os.environ["EXCEL_FILE_PATH"]
-        self.sheet_name = os.environ.get("EXCEL_SHEET_NAME", "Diète")
+        self.sheet_name = os.environ.get("EXCEL_SHEET_NAME", "Diete")
         self.user_id    = os.environ.get("ONEDRIVE_USER_ID", "me")
         self.headers    = {
             "Authorization": f"Bearer {self.token}",
@@ -42,11 +42,12 @@ class ExcelWriter:
         payload = {"values": [[value]]}
         resp = requests.patch(url, headers=self.headers, json=payload, timeout=15)
         resp.raise_for_status()
-        print(f"✅ {cell} = {value}")
+        print(f"OK {cell} = {value}")
 
     def update_or_append(self, nutrition: dict) -> str:
         self._write_cell("D12", nutrition["calories"])
         self._write_cell("C12", nutrition["proteines"])
         self._write_cell("I12", nutrition["glucides"])
         self._write_cell("H12", nutrition["lipides"])
-        self._write_cell("L12", nutrition["fib
+        self._write_cell("L12", nutrition["fibres"])
+        return "updated"
