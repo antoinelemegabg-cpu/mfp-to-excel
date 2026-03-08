@@ -24,7 +24,7 @@ class ExcelWriter:
     def __init__(self):
         self.token      = get_access_token()
         self.file_path  = os.environ["EXCEL_FILE_PATH"]
-        self.sheet_name = os.environ.get("EXCEL_SHEET_NAME", "Nutrition")
+        self.sheet_name = os.environ.get("EXCEL_SHEET_NAME", "Diète")
         self.user_id    = os.environ.get("ONEDRIVE_USER_ID", "me")
         self.headers    = {
             "Authorization": f"Bearer {self.token}",
@@ -34,41 +34,19 @@ class ExcelWriter:
     def _base_url(self) -> str:
         return f"{self.GRAPH_URL}/users/{self.user_id}/drive/root:{self.file_path}"
 
-    def _get_next_row(self) -> int:
-        url = f"{self._base_url()}:/workbook/worksheets/{self.sheet_name}/usedRange"
-        resp = requests.get(url, headers=self.headers, timeout=15)
-        resp.raise_for_status()
-        return resp.json().get("rowCount", 1) + 1
-
-    def _check_duplicate(self, date_str: str):
-        url = f"{self._base_url()}:/workbook/worksheets/{self.sheet_name}/usedRange"
-        resp = requests.get(url, headers=self.headers, timeout=15)
-        resp.raise_for_status()
-        values = resp.json().get("values", [])
-        for i, row in enumerate(values[1:], start=2):
-            if row and str(row[0]) == date_str:
-                return i
-        return None
-
-    def update_or_append(self, nutrition: dict) -> str:
-        date_str = nutrition["date"]
-        row_values = [[
-            nutrition["date"],
-            nutrition["calories"],
-            nutrition["proteines"],
-            nutrition["glucides"],
-            nutrition["lipides"],
-            nutrition["fibres"],
-            nutrition["sucres"],
-            nutrition["sodium"],
-        ]]
-        existing_row = self._check_duplicate(date_str)
-        row = existing_row if existing_row else self._get_next_row()
-        range_addr = f"A{row}:H{row}"
+    def _write_cell(self, cell: str, value):
         url = (
             f"{self._base_url()}:/workbook/worksheets/{self.sheet_name}"
-            f"/range(address='{range_addr}')"
+            f"/range(address='{cell}')"
         )
-        payload = {"values": row_values}
-        requests.patch(url, headers=self.headers, json=payload, timeout=15)
-        return "updated" if existing_row else "inserted"
+        payload = {"values": [[value]]}
+        resp = requests.patch(url, headers=self.headers, json=payload, timeout=15)
+        resp.raise_for_status()
+        print(f"✅ {cell} = {value}")
+
+    def update_or_append(self, nutrition: dict) -> str:
+        self._write_cell("D12", nutrition["calories"])
+        self._write_cell("C12", nutrition["proteines"])
+        self._write_cell("I12", nutrition["glucides"])
+        self._write_cell("H12", nutrition["lipides"])
+        self._write_cell("L12", nutrition["fib
