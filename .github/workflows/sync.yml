@@ -1,0 +1,32 @@
+name: MFP → Excel Sync
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # toutes les heures
+  workflow_dispatch:       # bouton manuel aussi
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run sync
+        env:
+          MFP_COOKIES:         ${{ secrets.MFP_COOKIES }}
+          AZURE_TENANT_ID:     ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID:     ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          EXCEL_FILE_PATH:     ${{ secrets.EXCEL_FILE_PATH }}
+          EXCEL_SHEET_NAME:    ${{ secrets.EXCEL_SHEET_NAME }}
+          ONEDRIVE_USER_ID:    ${{ secrets.ONEDRIVE_USER_ID }}
+        run: python main.py
