@@ -11,10 +11,10 @@ class MFPReportScraper:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Mozilla/5.0",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+            "Referer": "https://www.myfitnesspal.com/food/diary",
         })
         cookies_json = os.environ.get("MFP_COOKIES", "{}")
         cookies = json.loads(cookies_json)
@@ -25,35 +25,21 @@ class MFPReportScraper:
         if target_date is None:
             target_date = date.today()
         date_str = target_date.strftime("%Y-%m-%d")
-        url = f"{self.BASE_URL}/api/v2/diary/{date_str}"
-        params = {"fields[]": ["nutritional_contents", "calories", "food_name"]}
+
+        url = f"{self.BASE_URL}/api/v2/nutritional-summary"
+        params = {"date": date_str}
+
         resp = self.session.get(url, params=params, timeout=15)
         resp.raise_for_status()
-        data = resp.json()
-        return self._extract_totals(data, date_str)
+        raw = resp.json()
 
-    def _extract_totals(self, raw_data: dict, date_str: str) -> dict:
-        totals = {
+        return {
             "date": date_str,
-            "calories": 0.0,
-            "proteines": 0.0,
-            "glucides": 0.0,
-            "lipides": 0.0,
-            "fibres": 0.0,
-            "sucres": 0.0,
-            "sodium": 0.0,
+            "calories":  raw.get("calories", 0),
+            "proteines": raw.get("protein", 0),
+            "glucides":  raw.get("carbohydrates", 0),
+            "lipides":   raw.get("fat", 0),
+            "fibres":    raw.get("fiber", 0),
+            "sucres":    raw.get("sugar", 0),
+            "sodium":    raw.get("sodium", 0),
         }
-        items = raw_data.get("items", [])
-        for item in items:
-            nc = item.get("nutritional_contents", {})
-            totals["calories"]  += nc.get("energy", {}).get("value", 0) or 0
-            totals["proteines"] += nc.get("protein", 0) or 0
-            totals["glucides"]  += nc.get("carbohydrates", 0) or 0
-            totals["lipides"]   += nc.get("fat", 0) or 0
-            totals["fibres"]    += nc.get("fiber", 0) or 0
-            totals["sucres"]    += nc.get("sugar", 0) or 0
-            totals["sodium"]    += nc.get("sodium", 0) or 0
-        for key in totals:
-            if key != "date":
-                totals[key] = round(totals[key], 1)
-        return totals
